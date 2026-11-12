@@ -50,5 +50,12 @@ function storeMessage(key, userId, message, authTimeMs, metrics) {
   update.run([message, timestamp(), userId]); update.free();
   save(key, db); db.close();
 }
+function readLastMessage(key, userId) {
+  const db = load(key); const result = db.exec('SELECT last_message FROM users WHERE user_id = $userId LIMIT 1', { $userId: userId }); db.close();
+  return result.length && result[0].values.length ? result[0].values[0][0] : null;
+}
+function replaceLastMessage(key, userId, message) {
+  const db = load(key); const update = db.prepare('UPDATE users SET last_message = ?, last_message_at = ? WHERE user_id = ?'); update.run([message, timestamp(), userId]); update.free(); save(key, db); db.close();
+}
 function fileSize(key) { return fs.existsSync(DB_FILES[key]) ? fs.statSync(DB_FILES[key]).size : 0; }
-module.exports = { initialize, initializeModel, insertUser, userExists, getUser, storeMessage, fileSize };
+module.exports = { initialize, initializeModel, insertUser, userExists, getUser, storeMessage, readLastMessage, replaceLastMessage, fileSize };

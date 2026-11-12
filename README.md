@@ -1,5 +1,7 @@
 # AuthLab
 
+Full model equations, authentication flow, attack descriptions, metrics, and security conclusions: [docs/technical-report.md](docs/technical-report.md)
+
 An educational CLI that compares three registration models using separate SQLite databases:
 
 - **ZKAS / Schnorr-style verifier** — stores a salt and public verifier `v = g^x mod p`; the password-derived secret exponent is not stored.
@@ -26,3 +28,9 @@ Choose `2` from the main menu and enter the user id, password, and message. The 
 - **SHA-256** recomputes the salted digest and uses a timing-safe comparison.
 
 The message is stored only after successful verification in each model's `messages` table and as the user's `last_message`/`last_message_at`. Authentication time, database size, operation details, and algorithm-specific metrics are shown in the parent CLI. Authentication opens a fresh set of three windows; it does not reuse the registration windows.
+
+## Attack lab
+
+Under `2) Authentication`, choose `2) Attack lab`. The attacker comparison now has four bounded local-lab attacks: password guessing, credential replay, message tampering, and database-leak comparison. Each attack opens three fresh CLIs, reports progress and calculations, and returns to the main menu. Password guessing uses the same 22-candidate educational dictionary for every model. Credential replay uses a captured password/credential twice; it is intentionally labeled credential replay because the current classroom ZKAS implementation generates a fresh proof from the supplied password rather than exposing a network transcript API. Message tampering edits the local user record, reports whether the edit was detected, and restores the original value. Database-leak comparison reports exactly which credential fields each database exposes.
+
+For ZKAS, the user still enters a password on the client side so the client can derive the proof secret and generate a proof. The verifier should receive only the proof and store only public verification data. This single-machine classroom demo passes the password to the worker so all three models can be compared consistently; it must not be presented as a production password-blind deployment. Standardized PAKE designs such as OPAQUE are the appropriate reference point for a real client/server password-blind system.

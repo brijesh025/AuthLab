@@ -1,6 +1,7 @@
 const { initialize } = require('./database/sqlite');
 const { registerAcrossModels } = require('./services/registration');
 const { authenticateAcrossModels } = require('./services/authentication');
+const { passwordGuessingAttack, replayAttack, messageTamperingAttack, databaseLeakAttack } = require('./services/attacks');
 const { ask, createReadline } = require('./ui/input');
 
 async function registrationMenu(rl) {
@@ -13,6 +14,14 @@ async function registrationMenu(rl) {
 }
 
 async function authenticationMenu(rl) {
+  console.log('\nAuthentication options:');
+  console.log('1) Normal authentication and store a message');
+  console.log('2) Attack lab');
+  console.log('3) Back');
+  const action = (await ask(rl, 'Choose an authentication option: ')).trim().toLowerCase();
+  if (action === '3' || action === 'b' || action === 'back') return;
+  if (action === '2' || action === 'attack' || action === 'attacks') return attackMenu(rl);
+  if (action !== '1' && action !== 'normal') { console.log('\nInvalid authentication option.'); return; }
   const userId = (await ask(rl, '\nUser id (or B to go back): ')).trim();
   if (!userId || userId === '__EOF__' || ['b', 'back'].includes(userId.toLowerCase())) return;
   const password = await ask(rl, 'Password (hidden, or B to go back): ', true);
@@ -21,6 +30,36 @@ async function authenticationMenu(rl) {
   if (!message || ['b', 'back'].includes(message.toLowerCase())) return;
   await authenticateAcrossModels(userId, password, message);
   console.log('\nReturning to the main menu. The three authentication CLIs remain open until Enter is pressed in each one.');
+}
+
+async function attackMenu(rl) {
+  console.log('\nAttack lab:');
+  console.log('1) Bounded password-guessing attack');
+  console.log('2) Credential replay attack');
+  console.log('3) Message-tampering attack');
+  console.log('4) Database-leak comparison');
+  console.log('5) Back');
+  const choice = (await ask(rl, 'Choose an attack: ')).trim().toLowerCase();
+  if (choice === '5' || choice === 'b' || choice === 'back') return;
+  if (!['1', '2', '3', '4', 'guess', 'password', 'replay', 'tamper', 'leak'].includes(choice)) { console.log('\nInvalid attack option.'); return; }
+  const userId = (await ask(rl, '\nTarget user id: ')).trim();
+  if (!userId || ['b', 'back'].includes(userId.toLowerCase())) return;
+  if (choice === '1' || choice === 'guess' || choice === 'password') {
+    const message = (await ask(rl, 'Message to store if the password is guessed: ')).trim();
+    if (!message || ['b', 'back'].includes(message.toLowerCase())) return;
+    await passwordGuessingAttack(userId, message);
+  } else if (choice === '2' || choice === 'replay') {
+    const password = await ask(rl, 'Captured password/credential for replay test: ', true);
+    if (!password || password === '__EOF__') return;
+    const message = (await ask(rl, 'Replay message: ')).trim(); if (!message) return;
+    await replayAttack(userId, password, message);
+  } else if (choice === '3' || choice === 'tamper') {
+    const message = (await ask(rl, 'Replacement message written by the attacker: ')).trim(); if (!message) return;
+    await messageTamperingAttack(userId, message);
+  } else {
+    await databaseLeakAttack(userId);
+  }
+  console.log('\nReturning to the main menu.');
 }
 
 async function main() {
